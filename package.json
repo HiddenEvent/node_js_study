@@ -1,0 +1,27 @@
+{
+  "name": "startproject",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "dependencies": {
+    "pm2": "^4.2.3",
+    "sanitize-html": "^1.22.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HiddenEvent/node_js_study.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/HiddenEvent/node_js_study/issues"
+  },
+  "homepage": "https://github.com/HiddenEvent/node_js_study#readme"
+}

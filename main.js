@@ -2,38 +2,9 @@ var http = require('http');
 var fs = require('fs');
 var url = require('url');
 var qs = require('querystring');
-
-var template = {
-  html: function (title, list, body, control) {
-        return `
-        <!doctype html>
-        <html>
-        <head>
-          <title>WEB1 - ${title}</title>
-          <meta charset="utf-8">
-        </head>
-        <body>
-          <h1><a href="/">WEB</a></h1>
-          ${list}
-          ${control}
-          ${body}
-        </body>
-        </html>
-        `;
-  },
-  list: function (fileList){
-    var list = '<ul>'
-    var i = 0;
-    while(i < fileList.length){
-      list += `<li><a href="/?id=${fileList[i]}">${fileList[i]}</a></li>`
-      i++;
-    }
-    list += '</ul>'
-    return list;
-  },
-
-
-}
+var template = require('./lib/template.js');
+var path = require('path');
+var sanitizeHtml = require('sanitize-html');
 
 
 var app = http.createServer(function(request,response){
@@ -57,15 +28,19 @@ var app = http.createServer(function(request,response){
 
       } else {
         fs.readdir('./data', function(error, fileList){
+          var filteredId = path.parse(title).base;
           var list = template.list(fileList);
-          fs.readFile(`data/${title}`,'utf8', function(err, description){
-
+          fs.readFile(`data/${filteredId}`,'utf8', function(err, description){
+            var sanitizedTitle = sanitizeHtml(title);
+            var sanitizedDescription = sanitizeHtml(description, {
+              allowedTags:['h1','h2']
+            });
             var html = template.html(title, list,
-              `<h2>${title}</h2>${description}`,
+              `<h2>${sanitizedTitle}</h2>${sanitizedDescription}`,
               `<a href="/create">create</a>
-              <a href="/update?id=${title}">update</a>
+              <a href="/update?id=${sanitizedTitle}">update</a>
               <form action="delete_process" method="post">
-                <input type="hidden" name="id" value="${title}">
+                <input type="hidden" name="id" value="${sanitizedTitle}">
                 <input type="submit" value="delete">
               </form>
 
@@ -113,6 +88,7 @@ var app = http.createServer(function(request,response){
         var post = qs.parse(body);
         var title = post.title;
         var description = post.description;
+        var filteredId = path.parse(title).base;
         fs.writeFile(`data/${title}`, description, 'utf8', function(err){
           response.writeHead(302, {Location: `/?id=${title}`});
           response.end('success');
@@ -122,14 +98,15 @@ var app = http.createServer(function(request,response){
     } else if(pathname === '/update'){
       fs.readdir('./data', function(error, fileList){
         var list = template.list(fileList);
-        fs.readFile(`data/${title}`,'utf8', function(err, description){
+        var filteredId = path.parse(title).base;
+        fs.readFile(`data/${filteredId}`,'utf8', function(err, description){
 
           var html = template.html(title, list,
             `
             <form action="/update_process" method="post">
-              <input type="hidden" name="id" value="${title}">
+              <input type="hidden" name="id" value="${filteredId}">
               <p>
-                <input type="text" name="title" placeholder="제목 입력해주셈" value="${title}">
+                <input type="text" name="title" placeholder="제목 입력해주셈" value="${filteredId}">
               </p>
               <p>
                 <textarea type="text" name="description" placeholder="설명해주셈">${description}</textarea>
@@ -140,7 +117,7 @@ var app = http.createServer(function(request,response){
 
             </form>
             `,
-            `<a href="/create">create</a> <a href="/update?id=${title}">update</a>`
+            `<a href="/create">create</a> <a href="/update?id=${filteredId}">update</a>`
           );
           response.writeHead(200);
           response.end(html);
@@ -157,9 +134,11 @@ var app = http.createServer(function(request,response){
         var id = post.id;
         var title = post.title;
         var description = post.description;
-        fs.rename(`data/${id}`,`data/${title}`,function(error){
-          fs.writeFile(`data/${title}`,description,`utf8`,function(err){
-              response.writeHead(302, {Location: `/?id=${title}`});
+        var filteredId = path.parse(id).base;
+        var filteredTitle = path.parse(title).base;
+        fs.rename(`data/${filteredId}`,`data/${filteredTitle}`,function(error){
+          fs.writeFile(`data/${filteredTitle}`,description,`utf8`,function(err){
+              response.writeHead(302, {Location: `/?id=${filteredTitle}`});
               response.end();
           });
 
@@ -173,7 +152,8 @@ var app = http.createServer(function(request,response){
       request.on('end', function(){
         var post = qs.parse(body);
         var id = post.id;
-        fs.unlink(`data/${id}`, function(error){
+        var filteredId = path.parse(id).base;
+        fs.unlink(`data/${filteredId}`, function(error){
             response.writeHead(302, {Location: `/`});
             response.end();
         })
